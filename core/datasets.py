@@ -173,7 +173,7 @@ class FlyingThings3D(FlowDataset):
 
 
 class KITTI(FlowDataset):
-    def __init__(self, aug_params=None, split='training', root='./datasets/kitti'):
+    def __init__(self, aug_params=None, split='training', root='../dataset/data_scene_flow'):
         super(KITTI, self).__init__(aug_params, sparse=True)
         if split == 'testing':
             self.is_test = True

@@ -8,3 +8,5 @@ build/
 correlation.egg-info
 checkpoints/
 runs/
+result/
+pretrained_models.zip

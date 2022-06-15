@@ -9,8 +9,8 @@ import numpy as np
 import torch
 from PIL import Image
 
-from utils import flow_viz
-from utils.utils import InputPadder
+from core.utils import flow_viz
+from core.utils.utils import InputPadder
 from core import create_model
 
 

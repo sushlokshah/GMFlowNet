@@ -9,7 +9,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-
+import cv2 as cv
+import pandas as pd
 import datasets
 from utils import flow_viz
 from utils import frame_utils
@@ -142,8 +143,9 @@ def validate_kitti(model, iters=24):
     """ Peform validation using the KITTI-2015 (train) split """
     model.eval()
     val_dataset = datasets.KITTI(split='training')
-
+    print("completed dataloading")
     out_list, epe_list = [], []
+    flow_estimation_time =[]
     for val_id in range(len(val_dataset)):
         image1, image2, flow_gt, valid_gt = val_dataset[val_id]
         image1 = image1[None].cuda()
@@ -151,10 +153,19 @@ def validate_kitti(model, iters=24):
 
         padder = InputPadder(image1.shape, mode='kitti')
         image1, image2 = padder.pad(image1, image2)
-
+        start = time.time()
         flow_low, flow_pr = model(image1, image2, iters=iters, test_mode=True)
+        end = time.time()
+        flow_estimation_time.append(end - start)
         flow = padder.unpad(flow_pr[0]).cpu()
-
+        flow2 = (flow.numpy().transpose(1,2,0) + 512)*64
+        flow2_kitti_format = np.zeros([flow2.shape[0],flow2.shape[1],3])
+        flow2_kitti_format[:,:,2] = flow2[:,:,0]
+        flow2_kitti_format[:,:,1] = flow2[:,:,1]
+        flow2_kitti_format[:,:,0] = np.ones([flow2.shape[0],flow2.shape[1]]).reshape(flow2_kitti_format[:,:,0].shape)
+        flow2_kitti_format = flow2_kitti_format.astype(np.uint16)
+        cv.imwrite('result/gmflownet/'+ str(val_id).zfill(6) + "_10.png",flow2_kitti_format)
+        # print(flow2_kitti_format.shape)
         epe = torch.sum((flow - flow_gt)**2, dim=0).sqrt()
         mag = torch.sum(flow_gt**2, dim=0).sqrt()
 
@@ -168,7 +179,9 @@ def validate_kitti(model, iters=24):
 
     epe_list = np.array(epe_list)
     out_list = np.concatenate(out_list)
-
+    data = {"total_time" : flow_estimation_time}
+    df = pd.DataFrame.from_dict(data)
+    print("time:\n", df.describe())
     epe = np.mean(epe_list)
     f1 = 100 * np.mean(out_list)
 
@@ -193,6 +206,8 @@ if __name__ == '__main__':
     model.cuda()
     model.eval()
 
+    if not os.path.exists("result/gmflownet"):
+        os.makedirs(("result/gmflownet"))
     # create_sintel_submission(model.module, warm_start=True)
     # create_kitti_submission(model.module)
 
