@@ -11,13 +11,13 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import cv2 as cv
 import pandas as pd
-import datasets
-from utils import flow_viz
-from utils import frame_utils
+import core.datasets as datasets
+from core.utils import flow_viz
+from core.utils import frame_utils
 
 # from raft import RAFT, RAFT_Transformer
 from core import create_model
-from utils.utils import InputPadder, forward_interpolate
+from core.utils.utils import InputPadder, forward_interpolate
 
 
 @torch.no_grad()
@@ -188,6 +188,56 @@ def validate_kitti(model, iters=24):
     print("Validation KITTI: %f, %f" % (epe, f1))
     return {'kitti-epe': epe, 'kitti-f1': f1}
 
+@torch.no_grad()
+def validate_vkitti(model, iters=24,setup = ["fog"],output_dir = "result/vkitti/"):
+    """ Peform validation using the KITTI-2015 (train) split """
+    model.eval()
+    val_dataset = datasets.VirtualKITTI(split='training', seq= ["0001"], setup_type = setup, is_validate=True)
+    print("completed dataloading")
+    out_list, epe_list = [], []
+    flow_estimation_time =[]
+    for val_id in range(len(val_dataset)):
+        image1, image2, flow_gt, valid_gt, _ = val_dataset[val_id]
+        image1 = image1[None].cuda()
+        image2 = image2[None].cuda()
+
+        padder = InputPadder(image1.shape, mode='kitti')
+        image1, image2 = padder.pad(image1, image2)
+        start = time.time()
+        flow_low, flow_pr = model(image1, image2, iters=iters, test_mode=True)
+        end = time.time()
+        flow_estimation_time.append(end - start)
+        flow = padder.unpad(flow_pr[0]).cpu()
+        flow = flow.numpy().transpose(1,2,0)
+        flow_kitti_format = np.zeros([flow.shape[0],flow.shape[1],3])
+        flow_kitti_format[:,:,2] = (flow[:,:,0]/(flow.shape[1] - 1) + 1)*((2**16 - 1.0)/2)
+        flow_kitti_format[:,:,1] = (flow[:,:,1]/(flow.shape[0] - 1) + 1)*((2**16 - 1.0)/2)
+        flow_kitti_format[:,:,0] = np.ones([flow.shape[0],flow.shape[1]]).reshape(flow_kitti_format[:,:,0].shape)*(2**16 - 1.0)
+        flow_kitti_format = flow_kitti_format.astype(np.uint16)
+        cv.imwrite(output_dir + str(val_id).zfill(5) + ".png",flow_kitti_format)
+        # print(flow2_kitti_format.shape)
+        # epe = torch.sum((flow - flow_gt)**2, dim=0).sqrt()
+        # mag = torch.sum(flow_gt**2, dim=0).sqrt()
+
+        # epe = epe.view(-1)
+        # mag = mag.view(-1)
+        # val = valid_gt.view(-1) >= 0.5
+
+        # out = ((epe > 3.0) & ((epe/mag) > 0.05)).float()
+        # epe_list.append(epe[val].mean().item())
+        # out_list.append(out[val].cpu().numpy())
+
+    # epe_list = np.array(epe_list)
+    # out_list = np.concatenate(out_list)
+    data = {"total_time" : flow_estimation_time}
+    df = pd.DataFrame.from_dict(data)
+    print("time:\n", df.describe())
+    # epe = np.mean(epe_list)
+    # f1 = 100 * np.mean(out_list)
+
+    # print("Validation KITTI: %f, %f" % (epe, f1))
+    # return {'kitti-epe': epe, 'kitti-f1': f1}
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -206,23 +256,31 @@ if __name__ == '__main__':
     model.cuda()
     model.eval()
 
-    if not os.path.exists("result/gmflownet"):
-        os.makedirs(("result/gmflownet"))
-    # create_sintel_submission(model.module, warm_start=True)
-    # create_kitti_submission(model.module)
+    seq = os.listdir("/home/sushlok/new_approach/datasets/vkitti/vkitti_1.3.1_flowgt/0001")
+    for i in seq:
+        print(i)
+        if not os.path.exists("result/vkitti_" + i + "/"):
+            os.makedirs(("result/vkitti_" + i + "/"))
+        list_seq = []
+        list_seq.append(i)
+        # create_sintel_submission(model.module, warm_start=True)
+        # create_kitti_submission(model.module)
 
-    with torch.no_grad():
-        if args.dataset == 'chairs':
-            validate_chairs(model.module)
+        with torch.no_grad():
+            if args.dataset == 'chairs':
+                validate_chairs(model.module)
 
-        elif args.dataset == 'sintel':
-            validate_sintel(model.module)
+            elif args.dataset == 'sintel':
+                validate_sintel(model.module)
 
-        elif args.dataset == 'sintel_test':
-            create_sintel_submission(model.module)
+            elif args.dataset == 'sintel_test':
+                create_sintel_submission(model.module)
 
-        elif args.dataset == 'kitti':
-            validate_kitti(model.module)
+            elif args.dataset == 'kitti':
+                validate_kitti(model.module)
+                
+            elif args.dataset == 'vkitti':
+                validate_vkitti(model.module,setup= list_seq, output_dir = "result/vkitti_" + i + "/")
 
-        elif args.dataset == 'kitti_test':
-            create_kitti_submission(model.module)
+            elif args.dataset == 'kitti_test':
+                create_kitti_submission(model.module)

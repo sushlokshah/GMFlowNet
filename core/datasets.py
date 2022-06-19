@@ -209,7 +209,32 @@ class HD1K(FlowDataset):
 
             seq_ix += 1
 
+class VirtualKITTI(FlowDataset):
+    def __init__(self, aug_params=None, split='training', root='/home/sushlok/new_approach/datasets/vkitti', seq= ["0001","0002","0003"], setup_type = ["fog","morning"], is_validate=False):
+        super(VirtualKITTI, self).__init__(aug_params, sparse=True)
+        if split == 'testing':
+            self.is_test = True
 
+        self.is_validate = is_validate
+        image_dirs = []
+        # datasets/vkitti/vkitti_1.3.1_rgb
+        for s in seq:
+            for t in setup_type:
+                image_dirs += sorted(glob(osp.join(root, 'vkitti_1.3.1_rgb', '%s' %(s) ,'%s/*.png' % (t))))
+        
+        for i in range(len(image_dirs)-1):
+            img1 = image_dirs[i]
+            img2 = image_dirs[i+1]  
+            self.image_list += [ [img1, img2] ]
+            self.extra_info += [ [img1.split('/')[-1]] ]
+            
+        if split == 'training':
+            for s in seq:
+                for t in setup_type:
+                    self.flow_list += sorted(glob(osp.join(root, 'vkitti_1.3.1_flowgt', '%s' %(s) ,'%s/*.png' % (t))))
+            
+            
+    
 def fetch_dataloader(args, TRAIN_DS='C+T+K/S'):
     """ Create the data loader for the corresponding trainign set """
 
@@ -251,6 +276,10 @@ def fetch_dataloader(args, TRAIN_DS='C+T+K/S'):
         aug_params = {'crop_size': args.image_size, 'min_scale': -0.2, 'max_scale': 0.4, 'do_flip': False}
         train_dataset = KITTI(aug_params, split='training')
 
+    elif args.stage == 'vkitti':
+        aug_params = {'crop_size': args.image_size, 'min_scale': -0.2, 'max_scale': 0.4, 'do_flip': False}
+        train_dataset = VirtualKITTI(aug_params, split='training', seq= ["0001"], setup_type = ["fog"])
+    
     train_loader = data.DataLoader(train_dataset, batch_size=args.batch_size,
         pin_memory=False, shuffle=True, num_workers=4, drop_last=True)
 
