@@ -192,7 +192,7 @@ def validate_kitti(model, iters=24):
 def validate_vkitti(model, iters=24,setup = ["fog"],output_dir = "result/vkitti/"):
     """ Peform validation using the KITTI-2015 (train) split """
     model.eval()
-    val_dataset = datasets.VirtualKITTI(split='training', seq= ["0001"], setup_type = setup, is_validate=True)
+    val_dataset = datasets.VirtualKITTI(split='training', seq= ["0020"], setup_type = setup, is_validate=True)
     print("completed dataloading")
     out_list, epe_list = [], []
     flow_estimation_time =[]
