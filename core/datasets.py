@@ -210,7 +210,7 @@ class HD1K(FlowDataset):
             seq_ix += 1
 
 class VirtualKITTI(FlowDataset):
-    def __init__(self, aug_params=None, split='training', root='/home/sushlok/new_approach/datasets/vkitti', seq= ["0001","0002","0003"], setup_type = ["fog","morning"], is_validate=False):
+    def __init__(self, aug_params=None, split='training', root='/home/sushlok/carla-python', seq= ["0001","0002","0003"], setup_type = ["fog","morning"], is_validate=False):
         super(VirtualKITTI, self).__init__(aug_params, sparse=True)
         if split == 'testing':
             self.is_test = True
@@ -220,7 +220,7 @@ class VirtualKITTI(FlowDataset):
         # datasets/vkitti/vkitti_1.3.1_rgb
         for s in seq:
             for t in setup_type:
-                image_dirs += sorted(glob(osp.join(root, 'vkitti_1.3.1_rgb', '%s' %(s) ,'%s/*.png' % (t))))
+                image_dirs += sorted(glob(osp.join(root, 'image', '%s' %(s) ,'%s/*.png' % (t))))
         
         for i in range(len(image_dirs)-1):
             img1 = image_dirs[i]
@@ -231,7 +231,7 @@ class VirtualKITTI(FlowDataset):
         if split == 'training':
             for s in seq:
                 for t in setup_type:
-                    self.flow_list += sorted(glob(osp.join(root, 'vkitti_1.3.1_flowgt', '%s' %(s) ,'%s/*.png' % (t))))
+                    self.flow_list += sorted(glob(osp.join(root, 'flow', '%s' %(s) ,'%s/*.png' % (t))))
             
             
     

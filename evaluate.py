@@ -192,7 +192,7 @@ def validate_kitti(model, iters=24):
 def validate_vkitti(model, iters=24,setup = ["fog"],output_dir = "result/vkitti/"):
     """ Peform validation using the KITTI-2015 (train) split """
     model.eval()
-    val_dataset = datasets.VirtualKITTI(split='training', seq= ["0020"], setup_type = setup, is_validate=True)
+    val_dataset = datasets.VirtualKITTI(split='training', seq= ["0001"], setup_type = setup, is_validate=True)
     print("completed dataloading")
     out_list, epe_list = [], []
     flow_estimation_time =[]
@@ -256,31 +256,32 @@ if __name__ == '__main__':
     model.cuda()
     model.eval()
 
-    seq = os.listdir("/home/sushlok/new_approach/datasets/vkitti/vkitti_1.3.1_flowgt/0001")
+    seq = os.listdir("/home/sushlok/carla-python/flow/0001")
     for i in seq:
         print(i)
-        if not os.path.exists("result/vkitti_" + i + "/"):
-            os.makedirs(("result/vkitti_" + i + "/"))
-        list_seq = []
-        list_seq.append(i)
-        # create_sintel_submission(model.module, warm_start=True)
-        # create_kitti_submission(model.module)
+        if(i == "flow2"):
+            if not os.path.exists("result/vkitti_" + i + "/"):
+                os.makedirs(("result/vkitti_" + i + "/"))
+            list_seq = []
+            list_seq.append(i)
+            # create_sintel_submission(model.module, warm_start=True)
+            # create_kitti_submission(model.module)
 
-        with torch.no_grad():
-            if args.dataset == 'chairs':
-                validate_chairs(model.module)
+            with torch.no_grad():
+                if args.dataset == 'chairs':
+                    validate_chairs(model.module)
 
-            elif args.dataset == 'sintel':
-                validate_sintel(model.module)
+                elif args.dataset == 'sintel':
+                    validate_sintel(model.module)
 
-            elif args.dataset == 'sintel_test':
-                create_sintel_submission(model.module)
+                elif args.dataset == 'sintel_test':
+                    create_sintel_submission(model.module)
 
-            elif args.dataset == 'kitti':
-                validate_kitti(model.module)
-                
-            elif args.dataset == 'vkitti':
-                validate_vkitti(model.module,setup= list_seq, output_dir = "result/vkitti_" + i + "/")
+                elif args.dataset == 'kitti':
+                    validate_kitti(model.module)
+                    
+                elif args.dataset == 'vkitti':
+                    validate_vkitti(model.module,setup= list_seq, output_dir = "result/vkitti_" + i + "/")
 
-            elif args.dataset == 'kitti_test':
-                create_kitti_submission(model.module)
+                elif args.dataset == 'kitti_test':
+                    create_kitti_submission(model.module)
